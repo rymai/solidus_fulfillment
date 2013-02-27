@@ -62,7 +62,10 @@ class AmazonFulfillment
 
   # For Amazon these are the API access key and secret.
   def credentials
-    { :login => Fulfillment.config[:api_key], :password => Fulfillment.config[:secret_key] }
+    {
+      :login    => Spree::Fulfillment.config[:api_key],
+      :password => Spree::Fulfillment.config[:secret_key]
+    }
   end
 
   def remote
@@ -85,28 +88,28 @@ class AmazonFulfillment
   def options
     {
       :shipping_method => shipping_method,
-      :order_date => @shipment.order.created_at,
-      :comment => 'Thank you for your order.',
-      :email => @shipment.order.email
+      :order_date      => @shipment.order.created_at,
+      :comment         => 'Thank you for your order.',
+      :email           => @shipment.order.email
     }
   end
 
   def address
     addr = @shipment.address
     {
-      :name => "#{addr.firstname} #{addr.lastname}",
+      :name     => "#{addr.firstname} #{addr.lastname}",
       :address1 => addr.address1,
       :address2 => addr.address2,
-      :city => addr.city,
-      :state => addr.state.abbr,
-      :country => addr.state.country.iso,
-      :zip => addr.zipcode
+      :city     => addr.city,
+      :state    => addr.state.abbr,
+      :country  => addr.state.country.iso,
+      :zip      => addr.zipcode
     }
   end
 
   def max_quantity_failsafe(n)
-    return n unless Fulfillment.config[:max_quantity_failsafe]
-    [Fulfillment.config[:max_quantity_failsafe], n].min
+    return n unless Spree::Fulfillment.config[:max_quantity_failsafe]
+    [Spree::Fulfillment.config[:max_quantity_failsafe], n].min
   end
 
   def line_items
@@ -124,27 +127,27 @@ class AmazonFulfillment
   def ensure_shippable
     # Safety double-check. I think Spree should already enforce this.
     unless @shipment.ready?
-      Fulfillment.log "wrong state: #{@shipment.state}"
+      Spree::Fulfillment.log "wrong state: #{@shipment.state}"
       throw :halt
     end
   end
 
   # Runs inside a state_machine callback.  So throwing :halt is how we abort things.
   def fulfill
-    Fulfillment.log "AmazonFulfillment.fulfill start"
+    Spree::Fulfillment.log "AmazonFulfillment.fulfill start"
     sleep 1   # avoid throttle from Amazon
     ensure_shippable
     num = @shipment.number
     addr = address
     li = line_items
     opts = options
-    Fulfillment.log "#{num}; #{addr}; #{li}; #{opts}"
+    Spree::Fulfillment.log "#{num}; #{addr}; #{li}; #{opts}"
 
     begin
       resp = remote.fulfill(num, addr, li, opts)
-      Fulfillment.log "#{resp.params}"
+      Spree::Fulfillment.log "#{resp.params}"
     rescue => e
-      Fulfillment.log "failed - #{e}"
+      Spree::Fulfillment.log "failed - #{e}"
       throw :halt
     end
 
@@ -165,9 +168,9 @@ class AmazonFulfillment
   # shipment that will result in a permanent failure to fulfill, else nil.
   def track
     sleep 1   # avoid throttle from Amazon
-    Fulfillment.log "amazon order id #{@shipment.number}"
+    Spree::Fulfillment.log "amazon order id #{@shipment.number}"
     resp = remote.fetch_tracking_raw(@shipment.number)
-    Fulfillment.log "#{resp.params}"
+    Spree::Fulfillment.log "#{resp.params}"
     # This can happen, for example, if the SKU doesn't exist.
     return :error if !resp.success? && resp.params["faultstring"] && resp.faultstring["requested order not found"]
     return nil unless resp.params["fulfillment_info"]      # not known yet
