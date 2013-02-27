@@ -8,12 +8,12 @@ namespace :spree_fulfillment do
   namespace :process do
     desc "Passes any shipments that are ready to the fulfillment service"
     task :ready do
-      Fulfillment.process_ready
+      Spree::Fulfillment.process_ready
     end
 
     desc "Gets tracking number and sends ship email when fulfillment house is done"
     task :shipped do
-      Fulfillment.process_shipped
+      Spree::Fulfillment.process_shipped
     end
   end
 end
