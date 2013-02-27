@@ -15,10 +15,9 @@ raise "obsolete code should not be loaded"      # enforce no-op file
 # http://stackoverflow.com/questions/660599/rails-per-request-hash
 
 Spree::BaseController.class_eval do
-  
   before_filter :fulfill_before_filter
   after_filter :fulfill_after_filter
-  
+
   def fulfill_before_filter
     @@fulfillment_store = [] unless defined?(@@fulfillment_store)
   end
@@ -34,21 +33,17 @@ Spree::BaseController.class_eval do
     end
     @@fulfillment_store = []
   end
-  
+
   def self.fulfillment_store(x)
     return unless defined?(@@fulfillment_store)   # can happen from rails console
     @@fulfillment_store << x
   end
-  
 end
-
-
 
 # Pass the order email through to Amazon.  One line added.
 # See https://forums.aws.amazon.com/thread.jspa?messageID=173074&#173074
 # This never seemed to do anything.
 ActiveMerchant::Fulfillment::AmazonService.class_eval do
-
   def build_fulfillment_request(order_id, shipping_address, line_items, options)
     request = OPERATIONS[:outbound][:create]
     soap_request(request) do |xml|
@@ -59,7 +54,7 @@ ActiveMerchant::Fulfillment::AmazonService.class_eval do
         xml.tag! "DisplayableOrderComment", options[:comment]
         xml.tag! "ShippingSpeedCategory", options[:shipping_method]
         xml.tag! "ShippingSpeedCategory", options[:shipping_method]
-        
+
         # Adding this line...
         xml.tag! "NotificationEmailList.1", options[:email]
 
@@ -68,5 +63,4 @@ ActiveMerchant::Fulfillment::AmazonService.class_eval do
       end
     end
   end
-
 end

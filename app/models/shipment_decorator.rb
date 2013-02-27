@@ -1,14 +1,13 @@
 Shipment.class_eval do
-  
   # We can get infinite recursion if these options are applied more than once.  So ensure
   # we are the one and only one.
   raise "can't patch more than once" if defined?(self.sf_ensure_only_once)
   def self.sf_ensure_only_once
   end
-  
+
   scope :fulfilling, where(:state => 'fulfilling')
   scope :fulfill_failed, where(:state => 'fulfill_fail')
-  
+
   state_machines[:state] = nil    # reset original state machine to start from scratch.
 
   # We know that there will be preexisting methods from the original Spree state machine.
@@ -57,7 +56,7 @@ Shipment.class_eval do
     end
     Fulfillment.log "before_fulfilling end"
   end
-  
+
   # Know about our new state - do not erase it accidentally.
   alias_method :orig_determine_state, :determine_state
   def determine_state(order)
@@ -65,6 +64,4 @@ Shipment.class_eval do
     return 'shipped' if valid_tracking?
     orig_determine_state(order)
   end
-  
-  
 end

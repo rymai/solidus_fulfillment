@@ -17,7 +17,7 @@ the 'shipped' state and an email is sent to the customer.
 ### Add to your gemfile:
 
 ```ruby
-gem 'whenever', :require => false      # if you want whenever to manage the cron job
+gem 'whenever', :require => false # if you want whenever to manage the cron job
 gem 'spree_fulfillment', :git => 'git://github.com/wimm/spree_fulfillment.git'
 ```
 
@@ -52,7 +52,7 @@ end
 ### Add to deploy.rb:
 
 ```ruby
-require 'whenever/capistrano'      # if you want whenever to manage the cron job
+require 'whenever/capistrano' # if you want whenever to manage the cron job
 ```
 
 ### Add to your application initializer:

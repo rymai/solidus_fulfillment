@@ -21,5 +21,4 @@ namespace :spree_fulfillment do
       Spree::FileUtilz.mirror_files(source, destination)
     end
   end
-
 end

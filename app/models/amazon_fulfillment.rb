@@ -1,13 +1,11 @@
 class AmazonFulfillment
-  
   ActiveMerchant::Fulfillment::AmazonService.class_eval do
-    
     # Used to get an error back if the order doesn't exist, so we can stop endlessly
     # querying.
     def fetch_tracking_raw(oid)
       commit :outbound, :tracking, build_tracking_request(oid, {})
     end
-    
+
     # See http://www.ruby-forum.com/topic/208730#908342
     def clean_encoding(str)
       # Try it as UTF-8 directly
@@ -16,7 +14,7 @@ class AmazonFulfillment
       # Force it to UTF-8, throwing out invalid bits
       str.encode!( 'UTF-8', invalid: :replace, undef: :replace )
     end
-    
+
     alias_method :orig_parse_response, :parse_response
     def parse_response(service, op, xml)
       # Force UTF-8 encoding
@@ -29,8 +27,7 @@ class AmazonFulfillment
       end
       resp
     end
-    
-    
+
     # Monkeypatch of the original parse_tracking_response to include carrier, ship date, and arrival time.
     # Changed lines are marked.
     def parse_tracking_response(document)
@@ -57,24 +54,21 @@ class AmazonFulfillment
       response[:response_status] = ActiveMerchant::Fulfillment::AmazonService::SUCCESS
       response
     end
-    
-    
   end
-  
 
   def initialize(s)
     @shipment = s
   end
-  
+
   # For Amazon these are the API access key and secret.
   def credentials
     { :login => Fulfillment.config[:api_key], :password => Fulfillment.config[:secret_key] }
   end
-  
+
   def remote
     @remote ||= ActiveMerchant::Fulfillment::AmazonService.new(credentials)
   end
-  
+
   def shipping_method
     sm = @shipment.shipping_method
     return 'Standard' unless sm
@@ -87,7 +81,7 @@ class AmazonFulfillment
       'Standard'
     end
   end
-  
+
   def options
     {
       :shipping_method => shipping_method,
@@ -96,7 +90,7 @@ class AmazonFulfillment
       :email => @shipment.order.email
     }
   end
-  
+
   def address
     addr = @shipment.address
     {
@@ -109,12 +103,12 @@ class AmazonFulfillment
       :zip => addr.zipcode
     }
   end
-  
+
   def max_quantity_failsafe(n)
     return n unless Fulfillment.config[:max_quantity_failsafe]
     [Fulfillment.config[:max_quantity_failsafe], n].min
   end
-  
+
   def line_items
     skus = @shipment.inventory_units.map do |io|
       sku = io.variant.sku
@@ -126,15 +120,15 @@ class AmazonFulfillment
       { :sku => sku, :quantity => max_quantity_failsafe(num) }
     end
   end
-  
+
   def ensure_shippable
-    # Safety double-check.  I think Spree should already enforce this.
+    # Safety double-check. I think Spree should already enforce this.
     unless @shipment.ready?
       Fulfillment.log "wrong state: #{@shipment.state}"
       throw :halt
     end
   end
-  
+
   # Runs inside a state_machine callback.  So throwing :halt is how we abort things.
   def fulfill
     Fulfillment.log "AmazonFulfillment.fulfill start"
@@ -153,7 +147,7 @@ class AmazonFulfillment
       Fulfillment.log "failed - #{e}"
       throw :halt
     end
-    
+
     # Stop the transition to shipped if there was an error.
     unless resp.success?
       if Fulfillment.config[:development_mode] && resp.params["faultstring"] =~ /ItemMissingCatalogData/
@@ -166,7 +160,7 @@ class AmazonFulfillment
     end
     Fulfillment.log "AmazonFulfillment.fulfill end"
   end
-  
+
   # Returns the tracking number if there is one, else :error if there's a problem with the
   # shipment that will result in a permanent failure to fulfill, else nil.
   def track
@@ -179,5 +173,4 @@ class AmazonFulfillment
     return nil unless resp.params["fulfillment_info"]      # not known yet
     resp.params["fulfillment_info"][@shipment.number]
   end
-    
 end
