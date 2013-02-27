@@ -6,7 +6,7 @@ Calculator::SalesTax.class_eval do
   def compute(order)
     value = orig_compute(order)
     rounded = (value * 100).round.to_f / 100
-    Fulfillment.log "rounded #{value} to #{rounded}"
+    Spree::Fulfillment.log "rounded #{value} to #{rounded}"
     rounded
   end
 end
