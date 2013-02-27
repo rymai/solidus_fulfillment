@@ -1,4 +1,4 @@
-Shipment.class_eval do
+Spree::Shipment.class_eval do
   # We can get infinite recursion if these options are applied more than once.  So ensure
   # we are the one and only one.
   raise "can't patch more than once" if defined?(self.sf_ensure_only_once)
@@ -12,7 +12,7 @@ Shipment.class_eval do
 
   # We know that there will be preexisting methods from the original Spree state machine.
   # Until there's a better API to update a state machine, just ignore the conflicts by
-  # overriding the old ones.  Ideally the state_machine gem would provide a way to delete
+  # overriding the old ones. Ideally the state_machine gem would provide a way to delete
   # an existing machine.
   StateMachine::Machine.ignore_method_conflicts = true
 
@@ -48,13 +48,13 @@ Shipment.class_eval do
   # will get rehandled.  If there are persistent errors, that should be treated
   # as a bug.
   def before_fulfilling
-    Fulfillment.log "before_fulfilling start"
+    Spree::Fulfillment.log "before_fulfilling start"
     if valid_tracking?
-      Fulfillment.log "skipping warehouse fulfillment - existing tracking code #{tracking}"
+      Spree::Fulfillment.log "skipping warehouse fulfillment - existing tracking code #{tracking}"
     else
-      Fulfillment.fulfill(self)     # throws :halt on error, which aborts transition
+      Spree::Fulfillment.fulfill(self)     # throws :halt on error, which aborts transition
     end
-    Fulfillment.log "before_fulfilling end"
+    Spree::Fulfillment.log "before_fulfilling end"
   end
 
   # Know about our new state - do not erase it accidentally.
