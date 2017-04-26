@@ -1,12 +1,32 @@
 module Spree
   class Fulfillment
-    CONFIG_FILE = "#{Rails.root}/config/fulfillment.yml"
+    CONFIG_FILE = Rails.root.join('config/fulfillment.yml')
     CONFIG = HashWithIndifferentAccess.new(YAML.load_file(CONFIG_FILE)[Rails.env])
 
+    TrackingInfo = Struct.new(:carrier, :tracking_number, :ship_time) do
+      def to_hash
+        {
+          carrier: carrier,
+          tracking_number: tracking_number,
+          ship_time: ship_time
+        }
+      end
+    end
+
     def self.service_for(shipment)
-      ca = CONFIG[:adapter]
-      raise "missing adapter config for #{Rails.env} -- check fulfillment.yml" unless ca
-      (ca + '_fulfillment').camelize.constantize.new(shipment)
+      "#{adapter}_fulfillment".camelize.constantize.new(shipment)
+    end
+
+    def self.adapter
+      return if defined?(@adapter)
+
+      @adapter = config[:adapter]
+
+      unless @adapter
+        raise "Missing adapter for #{Rails.env} -- Check config/fulfillment.yml"
+      end
+
+      @adapter
     end
 
     def self.fulfill(shipment)
@@ -23,63 +43,71 @@ module Spree
 
     # Passes any shipments that are ready to the fulfillment service
     def self.process_ready
-      log "process_ready start"
-      Spree::Shipment.ready.map(&:id).each do |sid|
-        Spree::Shipment.transaction do
-          begin
-            # Use locking to avoid multiple shipments due to race conditions.
-            # Note there's some risk of deadlock and bad behavior due to holding
-            # a lock over a third party remote transaction which might be slow.
-            s = Spree::Shipment.find(sid, :lock => true)
-            if s && s.state == "ready"
-              log "request ship for #{s.id} at #{Time.now}"
-              s.ship
-            else
-              log "skipping ship for id #{sid} : #{s} #{s.try(:state)} #{s.try(:tracking)}"
-            end
-          rescue => e
-            log "failed to ship id #{sid} due to #{e}"
-            Airbrake.notify(e) if defined?(Airbrake)
-            # continue on and try other shipments so that one bad shipment doesn't
-            # block an entire queue
-          end
-        end
-      end
-      log "process_ready finish"
-    end
+      log 'Spree::Fulfillment.process_ready start'
 
-    # Gets tracking number and sends ship email when fulfillment house is done
-    def self.process_shipped
-      log "process_shipped start"
-      Spree::Shipment.fulfilling.each do |s|
+      Spree::Shipment.ready.ids.each do |shipment_id|
+        shipment = Spree::Shipment.find(shipment_id)
+
+        next unless shipment && shipment.ready?
+
+        log "Request to ship shipment ##{shipment.id}"
         begin
-          tracking_info = unless s.valid_tracking?
-            log "querying tracking status for #{s.id} at #{Time.now}"
-            service_for(s).track
-          else
-            log "preexisting tracking status for #{s.id} - #{s.tracking}"
-            ti = s.tracking.split('::')
-            { :ship_time => Time.now, :carrier => ti.first, :tracking_number => ti.last }
-          end
-          next unless tracking_info      # nil means we don't know yet.
-          if tracking_info == :error
-            log "failed at warehouse"
-            s.fail_at_warehouse     # put into a permanent error state for inspection / repair
-          else
-            log "got tracking information: #{tracking_info}"
-            s.shipped_at = tracking_info[:ship_time]
-            s.tracking = "#{tracking_info[:carrier]}::#{tracking_info[:tracking_number]}"
-            s.ship_from_warehouse   # new tracking code means we just shipped
-          end
-        rescue => e
-          log "failed to get tracking info for id #{s.id} due to #{e}"
-          #log e.backtrace.join("\n")
+          shipment.ship!
+        rescue => ex
+          log "Spree::Fulfillment.process_ready: Failed to ship id #{shipment.id} due to #{ex}"
           Airbrake.notify(e) if defined?(Airbrake)
           # continue on and try other shipments so that one bad shipment doesn't
           # block an entire queue
         end
       end
-      log "process_shipped finish"
+    end
+
+    # Gets tracking number and sends ship email when fulfillment house is done
+    def self.process_fulfilling
+      log 'Spree::Fulfillment.process_fulfilling start'
+
+      Spree::Shipment.fulfilling.each do |shipment|
+        next if shipment.shipped?
+
+        tracking_info = remote_tracking_info(shipment)
+        log "Spree::Fulfillment.process_fulfilling: tracking_info #{tracking_info}"
+        next unless tracking_info
+
+        if tracking_info == :error
+          log 'Spree::Fulfillment.process_fulfilling: Could not retrieve' \
+            "tracking information for shipment #{shipment.id} (order ID: "\
+            "#{shipment.number})"
+          shipment.cancel
+        else
+          log 'Spree::Fulfillment.process_fulfilling: Tracking information: ' \
+            "#{tracking_info.inspect}"
+          shipment.attributes = {
+            shipped_at: tracking_info.ship_time,
+            tracking: "#{tracking_info.carrier}::#{tracking_info.tracking_number}"
+          }
+          shipment.ship!
+        end
+      end
+    end
+
+    def self.remote_tracking_info(shipment)
+      response = service_for(shipment).fetch_tracking_data
+      return unless response
+      log "Spree::Fulfillment.process_fulfilling: response #{response.inspect}"
+
+      tracking_info = TrackingInfo.new(
+        response.params.dig(:tracking_companies, shipment.number.to_s)&.first,
+        response.params.dig(:tracking_numbers, shipment.number.to_s)&.first,
+        response.params.dig(:shipping_date_times, shipment.number.to_s)&.first
+      )
+
+      unless tracking_info.carrier &&
+        tracking_info.tracking_number &&
+        tracking_info.ship_time
+        return :error
+      end
+
+      tracking_info.to_hash
     end
   end
 end
