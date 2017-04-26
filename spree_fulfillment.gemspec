@@ -18,7 +18,7 @@ Gem::Specification.new do |s|
   s.require_path = 'lib'
   s.requirements << 'none'
 
-  s.add_dependency 'spree_core', '>= 1.3.2'
+  s.add_dependency 'solidus_core', '~> 2.1'
   s.add_dependency 'active_fulfillment'
 
 #  s.add_development_dependency 'capybara', '~> 1.1.2'
