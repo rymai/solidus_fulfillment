@@ -93,7 +93,7 @@ module Spree
     def self.process_stock_levels
       log 'Spree::Fulfillment.process_stock_levels start'
 
-      skus = Spree::Variant.pluck(:sku) + ['JD-H3F7-NYVJ']
+      skus = Spree::Variant.pluck(:sku)
       default_stock_location = Spree::StockLocation.find_by(name: 'default')
 
       response = service.fetch_stock_levels(skus)
