@@ -38,7 +38,7 @@ ActiveFulfillment::AmazonMarketplaceWebService.class_eval do
 end
 
 class AmazonFulfillment
-  def initialize(shipment)
+  def initialize(shipment = nil)
     @shipment = shipment
   end
 
@@ -49,7 +49,7 @@ class AmazonFulfillment
     response = remote.fulfill(order_id, address, line_items, options)
     Spree::Fulfillment.log "Spree::AmazonFulfillment#fulfill: order_id: " \
       "#{order_id}\naddress: #{address}\nline_items: #{line_items}\noptions: " \
-      "#{options}\nresponse: #{response.params.inspect}"
+      "#{options}\nresponse: #{response.params}"
 
     response
   end
@@ -72,6 +72,26 @@ class AmazonFulfillment
     end
 
     Spree::Fulfillment.log "Spree::AmazonFulfillment#fetch_tracking_data: #{response.params}"
+
+    response
+  end
+
+  # Returns the stock levels for the given skus
+  def fetch_stock_levels(skus)
+    sleep 1 # avoid throttle from Amazon
+
+    response = begin
+      remote.fetch_stock_levels(skus: skus)
+    rescue => ex
+      Spree::Fulfillment.log 'Spree::AmazonFulfillment#fetch_stock_levels: Failed to get ' \
+        "stock levels"
+      Spree::Fulfillment.log "Spree::AmazonFulfillment#fetch_stock_levels: #{ex}"
+      Airbrake.notify(e) if defined?(Airbrake)
+
+      return nil
+    end
+
+    Spree::Fulfillment.log "Spree::AmazonFulfillment#fetch_stock_levels: #{response.params}"
 
     response
   end
