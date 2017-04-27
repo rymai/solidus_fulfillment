@@ -13,7 +13,7 @@ module Spree
       end
     end
 
-    def self.service_for(shipment)
+    def self.service(shipment = nil)
       "#{adapter}_fulfillment".camelize.constantize.new(shipment)
     end
 
@@ -30,7 +30,7 @@ module Spree
     end
 
     def self.fulfill(shipment)
-      service_for(shipment).fulfill
+      service(shipment).fulfill
     end
 
     def self.config
@@ -90,15 +90,31 @@ module Spree
       end
     end
 
+    def self.process_stock_levels
+      log 'Spree::Fulfillment.process_stock_levels start'
+
+      skus = Spree::Variant.pluck(:sku) + ['JD-H3F7-NYVJ']
+      default_stock_location = Spree::StockLocation.find_by(name: 'default')
+
+      response = service.fetch_stock_levels(skus)
+
+      response.params['stock_levels'].each do |sku, stock|
+        variant = Spree::Variant.find_by(sku: sku)
+        variant.stock_items.
+          find_by(stock_location_id: default_stock_location.id).
+          set_count_on_hand(stock)
+        log "Spree::Fulfillment.process_stock_levels: variant #{variant.inspect} has a new stock level of #{stock}"
+      end
+    end
+
     def self.remote_tracking_info(shipment)
-      response = service_for(shipment).fetch_tracking_data
+      response = service(shipment).fetch_tracking_data
       return unless response
-      log "Spree::Fulfillment.process_fulfilling: response #{response.inspect}"
 
       tracking_info = TrackingInfo.new(
-        response.params.dig(:tracking_companies, shipment.number.to_s)&.first,
-        response.params.dig(:tracking_numbers, shipment.number.to_s)&.first,
-        response.params.dig(:shipping_date_times, shipment.number.to_s)&.first
+        response.params.dig('tracking_companies', shipment.number.to_s)&.first,
+        response.params.dig('tracking_numbers', shipment.number.to_s)&.first,
+        response.params.dig('shipping_date_times', shipment.number.to_s)&.first
       )
 
       unless tracking_info.carrier &&
