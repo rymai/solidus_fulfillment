@@ -37,17 +37,20 @@ development:
   adapter: amazon
   api_key: <YOUR AMAZON AWS API KEY>
   secret_key: <YOUR AMAZON AWS SECRET KEY>
+  seller_id: <YOUR SELLER ID>
   development_mode: true
 
 test:
   adapter: amazon
   api_key: <YOUR AMAZON AWS API KEY>
   secret_key: <YOUR AMAZON AWS SECRET KEY>
+  seller_id: <YOUR SELLER ID>
 
 production:
   adapter: amazon
   api_key: <YOUR AMAZON AWS API KEY>
   secret_key: <YOUR AMAZON AWS SECRET KEY>
+  seller_id: <YOUR SELLER ID>
 ```
 
 ### Create config/schedule.rb:
