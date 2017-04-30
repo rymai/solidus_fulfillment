@@ -2,7 +2,7 @@
 Gem::Specification.new do |s|
   s.platform    = Gem::Platform::RUBY
   s.name        = 'solidus_fulfillment'
-  s.version     = '1.3.2'
+  s.version     = '2.0.0'
   s.summary     = 'Solidus extension to do fulfillment processing via various services when a shipment becomes ready'
   s.description = 'Solidus extension to do fulfillment processing via various services when a shipment becomes ready'
 
