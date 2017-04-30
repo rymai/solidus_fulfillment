@@ -14,11 +14,16 @@ module Spree
     end
 
     def self.service(shipment = nil)
-      "#{adapter}_fulfillment".camelize.constantize.new(shipment)
+      ('Solidus::Fulfillment::' + "#{adapter}_fulfillment".camelize).constantize.new(shipment)
+    rescue NameError
+      require "solidus/fulfillment/#{adapter}_fulfillment"
+      retry
+    rescue LoadError
+      log "Spree::Fulfillment.service: cannot load #{'Solidus::Fulfillment::' + "#{adapter}_fulfillment".camelize}"
     end
 
     def self.adapter
-      return if defined?(@adapter)
+      return @adapter if defined?(@adapter)
 
       @adapter = config[:adapter]
 
@@ -38,7 +43,7 @@ module Spree
     end
 
     def self.log(msg)
-      Rails.logger.info "**** spree_fulfillment: #{msg}"
+      Rails.logger.info "**** solidus_fulfillment: #{msg}"
     end
 
     # Passes any shipments that are ready to the fulfillment service

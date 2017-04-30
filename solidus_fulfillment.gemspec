@@ -1,17 +1,16 @@
 # encoding: UTF-8
 Gem::Specification.new do |s|
   s.platform    = Gem::Platform::RUBY
-  s.name        = 'spree_fulfillment'
+  s.name        = 'solidus_fulfillment'
   s.version     = '1.3.2'
-  s.summary     = 'Spree extension to do fulfillment processing via Amazon when a shipment becomes ready'
-  s.description = 'Spree extension to do fulfillment processing via Amazon when a shipment becomes ready'
+  s.summary     = 'Solidus extension to do fulfillment processing via various services when a shipment becomes ready'
+  s.description = 'Solidus extension to do fulfillment processing via various services when a shipment becomes ready'
 
-  s.required_ruby_version     = '>= 1.9.2'
-  s.required_rubygems_version = '>= 1.8.10'
+  s.required_ruby_version     = '>= 2.2.7'
 
-  s.author   = 'Bill Lipa'
-  s.email    = 'dojo@masterleep.com'
-  s.homepage = 'http://masterleep.com'
+  s.author   = 'Rémy Coutable'
+  s.email    = 'remy@rymai.me'
+  s.homepage = 'https://rubygems.org/gems/solidus_fulfillment'
 
   s.files        = `git ls-files`.split("\n")
   s.test_files   = `git ls-files -- {test,spec,features}/*`.split("\n")

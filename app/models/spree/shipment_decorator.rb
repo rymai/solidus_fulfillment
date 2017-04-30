@@ -67,7 +67,7 @@ Spree::Shipment.class_eval do
     end
   # TODO: Narrow down the catched exception
   rescue => ex
-    Spree::Fulfillment.log "Shipment#before_fulfilling failed: #{ex.message}" \
+    Spree::Fulfillment.log "Spree::Shipment#before_fulfilling failed: #{ex.message}" \
       "\n#{ex.backtrace}"
     throw :halt
   end

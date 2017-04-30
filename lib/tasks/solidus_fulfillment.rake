@@ -1,8 +1,8 @@
-namespace :spree_fulfillment do
+namespace :solidus_fulfillment do
   desc "Handles shipments that are ready for or have completed fulfillment"
   task process: :environment do
-    Rake::Task['spree_fulfillment:process:ready'].invoke
-    Rake::Task['spree_fulfillment:process:fulfilling'].invoke
+    Rake::Task['solidus_fulfillment:process:ready'].invoke
+    Rake::Task['solidus_fulfillment:process:fulfilling'].invoke
   end
 
   namespace :process do
